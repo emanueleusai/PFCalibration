@@ -271,15 +271,16 @@ PFChargedHadronAnalyzer::analyze(const Event& iEvent,
   Ehcal_.clear();  
   pfcID_.clear();
 
+  //std::cout<<isSimu;
   if(isMBMC_)
     isSimu=false;
 
   //  cout<<isSimu<<"    "<<isMBMC_<<endl;
 
   if ( isSimu ) { 
-    nEv[0]++;//  cout<<" True part size "<<(*trueParticles).size()<<"    "
-// 		  <<(*trueParticles)[0].pdgCode()<<"   "<<(*trueParticles)[1].pdgCode()<<endl;
-    if ( (*trueParticles).size() != 1 ) return;
+    nEv[0]++;  //cout<<" True part size "<<(*trueParticles).size()<<"    "
+ 		  //<<(*trueParticles)[0].pdgCode()<<"   "<<(*trueParticles)[1].pdgCode()<<endl;
+    if ( (*trueParticles).size() != 2 ) return;
     nEv[1]++;
     
     

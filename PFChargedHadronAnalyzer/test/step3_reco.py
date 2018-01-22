@@ -7,7 +7,7 @@ import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('RECO',eras.Run2_2017)
+process = cms.Process('RECO2',eras.Run2_2017)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -34,7 +34,7 @@ process.maxEvents = cms.untracked.PSet(
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:step2.root'),
-    fileNames = cms.untracked.vstring(file:E20ADE15-A5AE-E711-9434-0023AEEEB55F.root),
+    fileNames = cms.untracked.vstring('file:E20ADE15-A5AE-E711-9434-0023AEEEB55F.root'),
     #fileNames = cms.untracked.vstring('root://se01.indiacms.res.in//store/user/spandey/step2/PGun_step2_DIGI_902_Apr_14_FULL/CRAB_UserFiles/crab_PGun_step2_DIGI_902_Apr_14_FULL/170414_125708/0000/step2_2.root'),
     #fileNames = cms.untracked.vstring(),
     secondaryFileNames = cms.untracked.vstring()
@@ -53,49 +53,49 @@ process.configurationMetadata = cms.untracked.PSet(
 
 # Output definition
 
-process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
-    dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('GEN-SIM-RECO'),
-        filterName = cms.untracked.string('')
-    ),
-    eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
-    fileName = cms.untracked.string('file:step3.root'),
-    outputCommands = process.RECOSIMEventContent.outputCommands,
-    splitLevel = cms.untracked.int32(0)
-)
+# process.RECOSIMoutput = cms.OutputModule("PoolOutputModule",
+#     dataset = cms.untracked.PSet(
+#         dataTier = cms.untracked.string('GEN-SIM-RECO'),
+#         filterName = cms.untracked.string('')
+#     ),
+#     eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
+#     fileName = cms.untracked.string('file:step3.root'),
+#     outputCommands = process.RECOSIMEventContent.outputCommands,
+#     splitLevel = cms.untracked.int32(0)
+# )
 
-process.MINIAODSIMoutput = cms.OutputModule("PoolOutputModule",
-    compressionAlgorithm = cms.untracked.string('LZMA'),
-    compressionLevel = cms.untracked.int32(4),
-    dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('MINIAODSIM'),
-        filterName = cms.untracked.string('')
-    ),
-    dropMetaData = cms.untracked.string('ALL'),
-    eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
-    fastCloning = cms.untracked.bool(False),
-    fileName = cms.untracked.string('file:step3_inMINIAODSIM.root'),
-    outputCommands = process.MINIAODSIMEventContent.outputCommands,
-    overrideInputFileSplitLevels = cms.untracked.bool(True)
-)
+# process.MINIAODSIMoutput = cms.OutputModule("PoolOutputModule",
+#     compressionAlgorithm = cms.untracked.string('LZMA'),
+#     compressionLevel = cms.untracked.int32(4),
+#     dataset = cms.untracked.PSet(
+#         dataTier = cms.untracked.string('MINIAODSIM'),
+#         filterName = cms.untracked.string('')
+#     ),
+#     dropMetaData = cms.untracked.string('ALL'),
+#     eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
+#     fastCloning = cms.untracked.bool(False),
+#     fileName = cms.untracked.string('file:step3_inMINIAODSIM.root'),
+#     outputCommands = process.MINIAODSIMEventContent.outputCommands,
+#     overrideInputFileSplitLevels = cms.untracked.bool(True)
+# )
 
-process.DQMoutput = cms.OutputModule("DQMRootOutputModule",
-    dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('DQMIO'),
-        filterName = cms.untracked.string('')
-    ),
-    fileName = cms.untracked.string('file:step3_inDQM.root'),
-    outputCommands = process.DQMEventContent.outputCommands,
-    splitLevel = cms.untracked.int32(0)
-)
+# process.DQMoutput = cms.OutputModule("DQMRootOutputModule",
+#     dataset = cms.untracked.PSet(
+#         dataTier = cms.untracked.string('DQMIO'),
+#         filterName = cms.untracked.string('')
+#     ),
+#     fileName = cms.untracked.string('file:step3_inDQM.root'),
+#     outputCommands = process.DQMEventContent.outputCommands,
+#     splitLevel = cms.untracked.int32(0)
+# )
 
 # Additional output definition
 
-# Other statements
-process.mix.playback = True
-process.mix.digitizers = cms.PSet()
-for a in process.aliases: delattr(process, a)
-process.RandomNumberGeneratorService.restoreStateLabel=cms.untracked.string("randomEngineStateProducer")
+# # Other statements
+# process.mix.playback = True
+# process.mix.digitizers = cms.PSet()
+# for a in process.aliases: delattr(process, a)
+# process.RandomNumberGeneratorService.restoreStateLabel=cms.untracked.string("randomEngineStateProducer")
 from Configuration.AlCa.GlobalTag import GlobalTag
 #process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase1_2017_realistic', '')
 #process.GlobalTag = GlobalTag(process.GlobalTag, '92X_upgrade2017_realistic_forJetMET_HCALScaleStudies', '')
@@ -129,14 +129,18 @@ process.load("RecoParticleFlow.PFProducer.particleFlowSimParticle_cfi")
 #process.load("RecoParticleFlow.Configuration.HepMCCopy_cfi")                                                                        
 
 process.particleFlowSimParticle.ParticleFilter = cms.PSet(
-        # Allow *ALL* protons with energy > protonEMin                                                                               
+        # Allow *ALL* protons with energy > protonEMin  
+        verbose = cms.untracked.bool(True),                                                                    
         protonEMin = cms.double(5000.0),
         # Particles must have abs(eta) < etaMax (if close enough to 0,0,0)                                                           
         etaMax = cms.double(5.3),
         # Charged particles with pT < pTMin (GeV/c) are not simulated                                                                
         chargedPtMin = cms.double(0.0),
         # Particles must have energy greater than EMin [GeV]                                                                         
-        EMin = cms.double(0.0))
+        EMin = cms.double(0.0),
+        ecalRecHitsEB = cms.InputTag('ecalRecHit','EcalRecHitsEB'),
+        ecalRecHitsEE = cms.InputTag('ecalRecHit','EcalRecHitsEE'),
+        )
 
 process.genReReco = cms.Sequence(#process.generator+                                                                                 
                                  #process.genParticles+                                                                              
@@ -154,10 +158,10 @@ process.genReReco = cms.Sequence(#process.generator+
 
 
 # Path and EndPath definitions
-process.raw2digi_step = cms.Path(process.RawToDigi) 
-process.L1Reco_step = cms.Path(process.L1Reco)
-process.reconstruction_step = cms.Path(process.reconstruction)
-process.eventinterpretaion_step = cms.Path(process.EIsequence)
+# process.raw2digi_step = cms.Path(process.RawToDigi) 
+# process.L1Reco_step = cms.Path(process.L1Reco)
+# process.reconstruction_step = cms.Path(process.reconstruction)
+# process.eventinterpretaion_step = cms.Path(process.EIsequence)
 #process.endjob_step = cms.EndPath(process.endOfProcess)
 process.bla = cms.EndPath(process.pfChargedHadronAnalyzer)
 process.blo = cms.EndPath(process.genReReco)
@@ -204,36 +208,38 @@ process.blo = cms.EndPath(process.genReReco)
 
 #process.schedule = cms.Schedule(process.raw2digi_step,process.L1Reco_step,process.reconstruction_step,process.eventinterpretaion_step,process.endjob_step,process.blo,process.bla)
 
-process.schedule = cms.Schedule(process.raw2digi_step,process.L1Reco_step,process.reconstruction_step,process.eventinterpretaion_step,process.blo,process.bla)
+#process.schedule = cms.Schedule(process.raw2digi_step,process.L1Reco_step,process.reconstruction_step,process.eventinterpretaion_step,process.blo,process.bla)
+process.schedule = cms.Schedule(process.blo,process.bla)
+
 # customisation of the process.
 
 # Automatic addition of the customisation function from SimGeneral.MixingModule.fullMixCustomize_cff
-from SimGeneral.MixingModule.fullMixCustomize_cff import setCrossingFrameOn 
+#from SimGeneral.MixingModule.fullMixCustomize_cff import setCrossingFrameOn 
 
 #call to customisation function setCrossingFrameOn imported from SimGeneral.MixingModule.fullMixCustomize_cff
-process = setCrossingFrameOn(process)
+#process = setCrossingFrameOn(process)
 
 # End of customisation functions
 #do not add changes to your config after this point (unless you know what you are doing)
-from FWCore.ParameterSet.Utilities import convertToUnscheduled
-process=convertToUnscheduled(process)
-process.load('Configuration.StandardSequences.PATMC_cff')
-from FWCore.ParameterSet.Utilities import cleanUnscheduled
-process=cleanUnscheduled(process)
+# from FWCore.ParameterSet.Utilities import convertToUnscheduled
+# process=convertToUnscheduled(process)
+# process.load('Configuration.StandardSequences.PATMC_cff')
+# from FWCore.ParameterSet.Utilities import cleanUnscheduled
+# process=cleanUnscheduled(process)
 
 # customisation of the process.
 
-# Automatic addition of the customisation function from PhysicsTools.PatAlgos.slimming.miniAOD_tools
-from PhysicsTools.PatAlgos.slimming.miniAOD_tools import miniAOD_customizeAllMC 
+# # Automatic addition of the customisation function from PhysicsTools.PatAlgos.slimming.miniAOD_tools
+# from PhysicsTools.PatAlgos.slimming.miniAOD_tools import miniAOD_customizeAllMC 
 
-#call to customisation function miniAOD_customizeAllMC imported from PhysicsTools.PatAlgos.slimming.miniAOD_tools
-process = miniAOD_customizeAllMC(process)
+# #call to customisation function miniAOD_customizeAllMC imported from PhysicsTools.PatAlgos.slimming.miniAOD_tools
+# process = miniAOD_customizeAllMC(process)
 
 # End of customisation functions
 
 # Customisation from command line
 
 # Add early deletion of temporary data products to reduce peak memory need
-from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
-process = customiseEarlyDelete(process)
+# from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
+# process = customiseEarlyDelete(process)
 # End adding early deletion
