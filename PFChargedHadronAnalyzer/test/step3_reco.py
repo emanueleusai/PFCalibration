@@ -28,13 +28,14 @@ process.load('DQMOffline.Configuration.DQMOfflineMC_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(-1)
+    input = cms.untracked.int32(10)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:step2.root'),
-    fileNames = cms.untracked.vstring('file:E20ADE15-A5AE-E711-9434-0023AEEEB55F.root'),
+    fileNames = cms.untracked.vstring('file:rereco.root'),
+    #fileNames = cms.untracked.vstring('file:E20ADE15-A5AE-E711-9434-0023AEEEB55F.root'),
     #fileNames = cms.untracked.vstring('root://se01.indiacms.res.in//store/user/spandey/step2/PGun_step2_DIGI_902_Apr_14_FULL/CRAB_UserFiles/crab_PGun_step2_DIGI_902_Apr_14_FULL/170414_125708/0000/step2_2.root'),
     #fileNames = cms.untracked.vstring(),
     secondaryFileNames = cms.untracked.vstring()
@@ -59,8 +60,8 @@ process.configurationMetadata = cms.untracked.PSet(
 #         filterName = cms.untracked.string('')
 #     ),
 #     eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
-#     fileName = cms.untracked.string('file:step3.root'),
-#     outputCommands = process.RECOSIMEventContent.outputCommands,
+#     fileName = cms.untracked.string('file:step3cms.root'),
+#     outputCommands = cms.untracked.vstring('keep *'),
 #     splitLevel = cms.untracked.int32(0)
 # )
 
@@ -104,7 +105,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '93X_upgrade2023_realistic_v2',
 
 
 process.pfChargedHadronAnalyzer = cms.EDAnalyzer(
-    "PFChargedHadronAnalyzer",
+    "PFHgcalAnalyzer",
     PFCandidates = cms.InputTag("particleFlow"),
     PFSimParticles = cms.InputTag("particleFlowSimParticle"),
     EcalPFClusters = cms.InputTag("particleFlowClusterECAL"),
@@ -142,12 +143,23 @@ process.particleFlowSimParticle.ParticleFilter = cms.PSet(
         ecalRecHitsEE = cms.InputTag('ecalRecHit','EcalRecHitsEE'),
         )
 
+
+
+# process.load("RecoParticleFlow.PFProducer.simPFProducer_cfi")
+# process.load("RecoParticleFlow.PFTracking.hgcalTrackCollection_cfi")
+# process.load("RecoParticleFlow.PFTracking.pfTrack_cfi")
+# process.load("RecoMuon.MuonIdentification.muons1stStep_cfi")
+
 process.genReReco = cms.Sequence(#process.generator+                                                                                 
                                  #process.genParticles+                                                                              
                                  #process.genJetParticles+                                                                           
                                  #process.recoGenJets+                                                                               
                                  #process.genMETParticles+                                                                           
-                                 #process.recoGenMET+                                                                                
+                                 #process.recoGenMET+
+                                 # process.muons1stStep+
+                                 # process.pfTrack+
+                                 # process.hgcalTrackCollection+
+                                 # process.simPFProducer+                                                                                
                                  process.particleFlowSimParticle)
 
 
@@ -197,7 +209,9 @@ process.blo = cms.EndPath(process.genReReco)
 # process.dqmoffline_1_step = cms.EndPath(process.DQMOfflineMiniAOD)
 # process.dqmofflineOnPAT_step = cms.EndPath(process.PostDQMOffline)
 # process.dqmofflineOnPAT_1_step = cms.EndPath(process.PostDQMOfflineMiniAOD)
+
 # process.RECOSIMoutput_step = cms.EndPath(process.RECOSIMoutput)
+
 # process.MINIAODSIMoutput_step = cms.EndPath(process.MINIAODSIMoutput)
 # process.DQMoutput_step = cms.EndPath(process.DQMoutput)
 
@@ -209,7 +223,7 @@ process.blo = cms.EndPath(process.genReReco)
 #process.schedule = cms.Schedule(process.raw2digi_step,process.L1Reco_step,process.reconstruction_step,process.eventinterpretaion_step,process.endjob_step,process.blo,process.bla)
 
 #process.schedule = cms.Schedule(process.raw2digi_step,process.L1Reco_step,process.reconstruction_step,process.eventinterpretaion_step,process.blo,process.bla)
-process.schedule = cms.Schedule(process.blo,process.bla)
+process.schedule = cms.Schedule(process.blo,process.bla)#,process.RECOSIMoutput_step)
 
 # customisation of the process.
 

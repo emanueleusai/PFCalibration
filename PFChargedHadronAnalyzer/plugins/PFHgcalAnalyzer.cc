@@ -1,5 +1,4 @@
-//#include "RecoParticleFlow/Configuration/test/PFChargedHadronAnalyzer.h"
-#include "PFCalibration/PFChargedHadronAnalyzer/plugins/PFChargedHadronAnalyzer.h"
+#include "PFCalibration/PFChargedHadronAnalyzer/plugins/PFHgcalAnalyzer.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
 #include "DataFormats/ParticleFlowReco/interface/PFBlockElementTrack.h"
@@ -33,18 +32,11 @@ using namespace std;
 using namespace edm;
 using namespace reco;
 
-PFChargedHadronAnalyzer::PFChargedHadronAnalyzer(const edm::ParameterSet& iConfig) {
-  
-  nCh = std::vector<unsigned int>(10,static_cast<unsigned int>(0));
-  nEv = std::vector<unsigned int>(2,static_cast<unsigned int>(0));
+PFHgcalAnalyzer::PFHgcalAnalyzer(const edm::ParameterSet& iConfig) {
 
   inputTagPFCandidates_ 
     = iConfig.getParameter<InputTag>("PFCandidates");
   tokenPFCandidates_ = consumes<reco::PFCandidateCollection>(inputTagPFCandidates_);
-
-  inputTagPFSimParticles_ 
-    = iConfig.getParameter<InputTag>("PFSimParticles");
-  tokenPFSimParticles_ = consumes<reco::PFSimParticleCollection>(inputTagPFSimParticles_);
 
   inputTagEcalPFClusters_ 
     = iConfig.getParameter<InputTag>("EcalPFClusters");
@@ -56,8 +48,8 @@ PFChargedHadronAnalyzer::PFChargedHadronAnalyzer(const edm::ParameterSet& iConfi
   // Smallest track p
   pMin_ = iConfig.getParameter<double>("pMin");
 
-  // Smallest raw HCAL energy linked to the track
-  hcalMin_ = iConfig.getParameter<double>("hcalMin");
+  // Smallest raw calo energy linked to the track
+  calMin_ = iConfig.getParameter<double>("calMin");
 
   // Largest ECAL energy linked to the track to define a MIP
   ecalMax_ = iConfig.getParameter<double>("ecalMax");
@@ -75,7 +67,7 @@ PFChargedHadronAnalyzer::PFChargedHadronAnalyzer(const edm::ParameterSet& iConfi
   verbose_ = 
     iConfig.getUntrackedParameter<bool>("verbose",false);
 
-  LogDebug("PFChargedHadronAnalyzer")
+  LogDebug("PFHgcalAnalyzer")
     <<" input collection : "<<inputTagPFCandidates_ ;
    
 
@@ -100,53 +92,7 @@ PFChargedHadronAnalyzer::PFChargedHadronAnalyzer(const edm::ParameterSet& iConfi
 
   s->Branch("pfcs",&pfcsID);
 
-  //Track position at ECAL entrance
-  // s->Branch("etaAtEcal",&etaEcal_,"eta/F");  
-  // s->Branch("phiAtEcal",&phiEcal_,"phi/F");
   
-  // s->Branch("cluEcalE",&cluEcalE);
-  // s->Branch("cluEcalEta",&cluEcalEta);
-  // s->Branch("cluEcalPhi",&cluEcalPhi);
-
-  // s->Branch("distEcalTrk",&distEcalTrk);
-
-  // s->Branch("cluHcalE",&cluHcalE);
-  // s->Branch("cluHcalEta",&cluHcalEta);
-  // s->Branch("cluHcalPhi",&cluHcalPhi);
-
-  // s->Branch("distHcalTrk",&distHcalTrk);
-  // s->Branch("distHcalEcal",&distHcalEcal);
-
-  // s->Branch("addDr",&addDr );
-  // s->Branch("addPdgId",&addPdgId );
-  // s->Branch("addEmE",&addEmE );
-  // s->Branch("addHadE",&addHadE );
-  // s->Branch("addEta",&addEta );
-  // s->Branch("addPhi",&addPhi );
-
-  // s->Branch("genDr",&genDr );
-  // s->Branch("genPdgId",&genPdgId );
-  // s->Branch("genE",&genE );
-  // s->Branch("genEta",&genEta );
-  // s->Branch("genPhi",&genPhi );
-
-  // s->Branch("emHitX",&emHitX );
-  // s->Branch("emHitY",&emHitY );
-  // s->Branch("emHitZ",&emHitZ );
-  // s->Branch("emHitE",&emHitE );
-  // s->Branch("emHitF",&emHitF );
-
-  // s->Branch("hadHitX",&hadHitX );
-  // s->Branch("hadHitY",&hadHitY );
-  // s->Branch("hadHitZ",&hadHitZ );
-  // s->Branch("hadHitE",&hadHitE );
-  // s->Branch("hadHitF",&hadHitF );
-
-  //BasicCluster ECAL
-
-  // s->Branch("bcEcalE",&bcEcalE);
-  // s->Branch("bcEcalEta",&bcEcalEta);
-  // s->Branch("bcEcalPhi",&bcEcalPhi);
 
 
   s->Branch("run",&orun,"orun/l");
@@ -154,40 +100,15 @@ PFChargedHadronAnalyzer::PFChargedHadronAnalyzer(const edm::ParameterSet& iConfi
   s->Branch("lumiBlock",&olumiBlock,"orun/l");
   s->Branch("time",&otime,"orun/l");
 
-  //simHits
-   // s->Branch("EcalSimHits",&EcalSimHits);
-   // s->Branch("ESSimHits",&ESSimHits);
-   // s->Branch("HcalSimHits",&HcalSimHits);
-
-   //recHits
-   // s->Branch("EcalRecHits",&EcalRecHits);
-   // //s->Branch("ESSimHits",&ESSimHits);
-   // s->Branch("HcalRecHits",&HcalRecHits);
-
-   // s->Branch("EcalRecHitsDr",&EcalRecHitsDr);
-   // //s->Branch("ESSimHitsDr",&ESSimHitsDr);
-   // s->Branch("HcalRecHitsDr",&HcalRecHitsDr);
    
 
 }
 
 
 
-PFChargedHadronAnalyzer::~PFChargedHadronAnalyzer() { 
-
-  std::cout << "Total number of events .............. " << nEv[0] << std::endl;
-  std::cout << "Number of events with 2 Sim Particles  " << nEv[1] << std::endl;
+PFHgcalAnalyzer::~PFHgcalAnalyzer() { 
 
 
-  std::cout << "Number of PF candidates ............. " << nCh[0] << std::endl;
-  std::cout << "Number of PF Charged Hadrons......... " << nCh[1] << std::endl;
-  std::cout << " - With pt > " << ptMin_ << " GeV/c ................ " << nCh[2] << std::endl;
-  std::cout << " - With E_HCAL > " << hcalMin_ << " GeV .............. " << nCh[3] << std::endl;
-  std::cout << " - With only 1 track in the block ... " << nCh[4] << std::endl;
-  std::cout << " - With p > " << pMin_ << " GeV/c ................. " << nCh[5] << std::endl;
-  std::cout << " - With at least " << nPixMin_ << " pixel hits ....... " << nCh[6] << std::endl;
-  std::cout << " - With more than "<< nHitMin_[0] << " track hits ..... " << nCh[7] << std::endl;
-  std::cout << " - With E_ECAL < " << ecalMax_ << " GeV ............ " << nCh[8] << std::endl;
 
   tf1->cd();
   s->Write();
@@ -200,15 +121,15 @@ PFChargedHadronAnalyzer::~PFChargedHadronAnalyzer() {
 
 
 void 
-PFChargedHadronAnalyzer::beginRun(const edm::Run& run, 
+PFHgcalAnalyzer::beginRun(const edm::Run& run, 
 				  const edm::EventSetup & es) { }
 
 
 void 
-PFChargedHadronAnalyzer::analyze(const Event& iEvent, 
+PFHgcalAnalyzer::analyze(const Event& iEvent, 
 				 const EventSetup& iSetup) {
   
-  LogDebug("PFChargedHadronAnalyzer")<<"START event: "<<iEvent.id().event()
+  LogDebug("PFHgcalAnalyzer")<<"START event: "<<iEvent.id().event()
 			 <<" in run "<<iEvent.id().run()<<endl;
   
 
@@ -237,10 +158,10 @@ PFChargedHadronAnalyzer::analyze(const Event& iEvent,
   Handle<reco::PFClusterCollection> pfClustersEcal;
   iEvent.getByToken(tokenEcalPFClusters_, pfClustersEcal);
 
-  Handle<PFSimParticleCollection> trueParticles;
-  //FIXME
-  // bool isMBMC=true;
-  bool isSimu = iEvent.getByToken(tokenPFSimParticles_, trueParticles);
+  // Handle<PFSimParticleCollection> trueParticles;
+  // //FIXME
+  // // bool isMBMC=true;
+  // bool isSimu = iEvent.getByToken(tokenPFSimParticles_, trueParticles);
 
   //simHits
   EcalSimHits.clear();
@@ -267,111 +188,36 @@ PFChargedHadronAnalyzer::analyze(const Event& iEvent,
   ecal_ = 0.;
   hcal_ = 0.;
 
-  if(isMBMC_) isSimu=false;
-
-for( CI ci  = pfCandidates->begin(); ci!=pfCandidates->end(); ++ci) 
+  // count number of charged hadrons;
+  auto charged_hadrons = std::make_unique<reco::PFCandidateCollection>();
+  for (const auto& pfc : *pfCandidates)
+  {
+    if ( pfc.particleId() == reco::PFCandidate::h)
     {
-      const reco::PFCandidate& pfc = *ci;
-//if ( pfc.particleId() == 1 && (pfc.rawEcalEnergy()>0.01 || pfc.rawHcalEnergy()>0.01))
-if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0 && pfc.particleId() == 1)
-    std::cout <<" raw Ecal:"<<pfc.rawEcalEnergy() <<" raw Hcal:"<<pfc.rawHcalEnergy() <<" Hcal:"<<pfc.hcalEnergy() <<" p:"<<pfc.p()<<" pt:"<<pfc.pt() <<" eta:"<<pfc.eta() <<std::endl;
-}
-
-  if ( isSimu )
-  { 
-    nEv[0]++; 
-    //cout<<" True part size "<<(*trueParticles).size()<<"    "
- 		  //<<(*trueParticles)[0].pdgCode()<<"   "<<(*trueParticles)[1].pdgCode()<<endl;
-
-    //select only events with exactly two SIM particles
-    if ( (*trueParticles).size() != 2 ) return;
-    nEv[1]++;
-    
-    
-    // Check if there is a reconstructed track
-    bool isCharged = false;
-
-    //loop PF candidates
-    for( CI ci  = pfCandidates->begin(); ci!=pfCandidates->end(); ++ci) 
-    {
-      const reco::PFCandidate& pfc = *ci;
-	    pfcsID.push_back( pfc.particleId() );
-      // std::cout << "Id = " << pfc.particleId() << std::endl;
-      if ( pfc.particleId() < 4 )
-      { 
-	       isCharged = true;
+      charged_hadrons.emplace_back(pfc);
+      if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0)
+      {
+        std::cout<<" "<< pfc.rawEcalEnergy() <<" "<<pfc.rawHcalEnergy() <<" "<<pfc.hcalEnergy() <<" "<<pfc.pt() <<" "<<pfc.eta() <<std::endl;
       }
     }
+  }
+  //select only events with exactly two charges hadrons
+  if (charged_hadrons.size()!=2) return;
 
 
-    // Case of no reconstructed tracks (and neutral single particles)
-    if ( !isCharged )
-    { 
-      //get phi and pt of first simparticle at ecal entrance
-      reco::PFTrajectoryPoint::LayerType ecalEntrance = reco::PFTrajectoryPoint::ECALEntrance;
-      const reco::PFTrajectoryPoint& tpatecal = ((*trueParticles)[0]).extrapolatedPoint( ecalEntrance );
-      eta_ = tpatecal.positionREP().Eta();
-      if ( fabs(eta_) < 1E-10 ) return; 
-      phi_ = tpatecal.positionREP().Phi();
-      true_ = std::sqrt(tpatecal.momentum().Vect().Mag2());
-
-      //loop over pfcandidates
-      for( CI ci  = pfCandidates->begin(); ci!=pfCandidates->end(); ++ci)
-      {
-        //match pfcand with first simcandidate and save raw ECAL/HCAL energy from pfc.
-	       const reco::PFCandidate& pfc = *ci;
-	       double deta = eta_ - pfc.eta();
-	       double dphi = dPhi(phi_, pfc.phi() );
-	       double dR = std::sqrt(deta*deta+dphi*dphi);
-	       if ( dR < 1.2 )
-         {
-	         dr_.push_back(dR);   //spandey Apr_27 dR
-	         pfcID_.push_back(pfc.particleId());   //spandey Apr_27 dR
-	         Eecal_.push_back(pfc.rawEcalEnergy());  //spandey Apr_27 dR
-	         Ehcal_.push_back(pfc.rawHcalEnergy());  //spandey Apr_27 dR
-	       }
-
-         //sum energy of matched candidates
-	       if ( pfc.particleId() == 4 && dR < 0.2 ) ecal_ += pfc.rawEcalEnergy();
-	       if ( pfc.particleId() == 5 && dR < 0.4 ) hcal_ += pfc.rawHcalEnergy();
-
-      }
-      
-      //fill ttree and go to next event      
-      s->Fill();
-      return;
-    }//neutral particle
-
-  }//issimu
-  
-
-  // Case of a reconstructed track.
-  // Loop on pfCandidates
-
-  for( CI ci  = pfCandidates->begin(); ci!=pfCandidates->end(); ++ci)
+  for (const auto& pfc : charged_hadrons)
   {
-    const reco::PFCandidate& pfc = *ci;
-    nCh[0]++;
-
-    // Only charged hadrons (no PF muons, no PF electrons) 1 / 5
-    if ( pfc.particleId() != 1 ) continue;
-    nCh[1]++;
 
     // Charged hadron minimum pt (the track pt, to an excellent approximation)
     if ( pfc.pt() < ptMin_ ) continue;
-    nCh[2]++;
 
-    // At least 1 GeV in HCAL
-    double ecalRaw = pfc.rawEcalEnergy();
-    double hcalRaw = pfc.rawHcalEnergy();
-    double hoRaw = pfc.rawHoEnergy();
 
-    if ( ecalRaw + hcalRaw < hcalMin_ ) continue;
-    nCh[3]++;
+    if ( pfc.rawEcalEnergy() + pfc.rawHcalEnergy() < calMin_ ) continue;
 
     // Find the corresponding PF block elements
-    const PFCandidate::ElementsInBlocks& theElements = pfc.elementsInBlocks();
+    const auto& theElements = pfc.elementsInBlocks();
     if( theElements.empty() ) continue;
+    
     const reco::PFBlockRef blockRef = theElements[0].first;
     PFBlock::LinkData linkData =  blockRef->linkData();
     const edm::OwnVector<reco::PFBlockElement>& elements = blockRef->elements();
@@ -655,7 +501,7 @@ if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0 && pfc.particleId() == 1)
 }
 
 
-float PFChargedHadronAnalyzer::dR(float eta1, float eta2, float phi1, float phi2 ) {
+float PFHgcalAnalyzer::dR(float eta1, float eta2, float phi1, float phi2 ) {
 
   TVector3 v1(0,0,0),v2(0,0,0);
   
@@ -667,7 +513,7 @@ float PFChargedHadronAnalyzer::dR(float eta1, float eta2, float phi1, float phi2
 }
 
 
-void PFChargedHadronAnalyzer::SaveSimHit(const edm::Event& iEvent,  float eta_, float phi_) {
+void PFHgcalAnalyzer::SaveSimHit(const edm::Event& iEvent,  float eta_, float phi_) {
 
   //Access to simHits informations
   Handle<PCaloHitContainer> h_PCaloHitsEB;
@@ -740,13 +586,13 @@ void PFChargedHadronAnalyzer::SaveSimHit(const edm::Event& iEvent,  float eta_, 
 }
 
 
-float PFChargedHadronAnalyzer::Eta( float theta_ ) {
+float PFHgcalAnalyzer::Eta( float theta_ ) {
   if( sin(theta_/2.)==0 ) return 10000.*cos(theta_/2.);
   return -log(tan(theta_/2.0));
 }
 
 
-void PFChargedHadronAnalyzer::SaveRecHits(const edm::Event& iEvent, float eta_, float phi_) {
+void PFHgcalAnalyzer::SaveRecHits(const edm::Event& iEvent, float eta_, float phi_) {
 
   //get rechits
   edm::Handle< EcalRecHitCollection > ebRecHits_h;
@@ -813,13 +659,13 @@ void PFChargedHadronAnalyzer::SaveRecHits(const edm::Event& iEvent, float eta_, 
 }
 
 float 
-PFChargedHadronAnalyzer::phi( float x, float y ) {
+PFHgcalAnalyzer::phi( float x, float y ) {
   float phi_ =atan2(y, x);
   return (phi_>=0) ?  phi_ : phi_ + 2*3.141592;
 }
 
 float 
-PFChargedHadronAnalyzer::dPhi( float phi1, float phi2 )
+PFHgcalAnalyzer::dPhi( float phi1, float phi2 )
 {
   float phi1_= phi( cos(phi1), sin(phi1) );
   float phi2_= phi( cos(phi2), sin(phi2) );
@@ -829,4 +675,4 @@ PFChargedHadronAnalyzer::dPhi( float phi1, float phi2 )
   return dphi_;
 }
 
-DEFINE_FWK_MODULE(PFChargedHadronAnalyzer);
+DEFINE_FWK_MODULE(PFHgcalAnalyzer);
