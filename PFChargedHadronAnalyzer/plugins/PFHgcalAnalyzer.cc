@@ -189,63 +189,60 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
   hcal_ = 0.;
 
   // count number of charged hadrons;
-  auto charged_hadrons = std::make_unique<reco::PFCandidateCollection>();
+  // auto charged_hadrons = std::make_unique<reco::PFCandidateCollection>();
+  std::vector<const reco::PFCandidate*> charged_hadrons;
   for (const auto& pfc : *pfCandidates)
   {
     if ( pfc.particleId() == reco::PFCandidate::h)
     {
-      charged_hadrons.emplace_back(pfc);
+      charged_hadrons.emplace_back(&pfc);
       if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0)
       {
         std::cout<<" "<< pfc.rawEcalEnergy() <<" "<<pfc.rawHcalEnergy() <<" "<<pfc.hcalEnergy() <<" "<<pfc.pt() <<" "<<pfc.eta() <<std::endl;
       }
     }
   }
-  //select only events with exactly two charges hadrons
-  if (charged_hadrons.size()!=2) return;
-
+  //select only events with exactly one charged hadron
+  //change to 2 id the antiparticle is generated as well
+  if (charged_hadrons.size()!=1) return; 
 
   for (const auto& pfc : charged_hadrons)
   {
 
     // Charged hadron minimum pt (the track pt, to an excellent approximation)
-    if ( pfc.pt() < ptMin_ ) continue;
+    if ( pfc->pt() < ptMin_ ) continue;
 
 
-    if ( pfc.rawEcalEnergy() + pfc.rawHcalEnergy() < calMin_ ) continue;
+    if ( pfc->rawEcalEnergy() + pfc->rawHcalEnergy() < calMin_ ) continue;
 
     // Find the corresponding PF block elements
-    const auto& theElements = pfc.elementsInBlocks();
+    const auto& theElements = pfc->elementsInBlocks();
     if( theElements.empty() ) continue;
     
-    const reco::PFBlockRef blockRef = theElements[0].first;
-    PFBlock::LinkData linkData =  blockRef->linkData();
-    const edm::OwnVector<reco::PFBlockElement>& elements = blockRef->elements();
+    const auto&  blockRef = theElements[0].first;
+    const auto&  linkData =  blockRef->linkData();
+    const auto&  elements = blockRef->elements();
 
     // Check that there is only one track in the block.
-    unsigned int nTracks = 0;
-    unsigned int nEcal = 0;
-    unsigned int nHcal = 0;
-    unsigned iTrack = 999;
-    vector<unsigned> iECAL;// =999;
-    vector<unsigned> iHCAL;// =999;
-    for(unsigned iEle=0; iEle<elements.size(); iEle++)
+
+    std::vector<const reco::PFBlockElement*> iTrack;
+    std::vector<const reco::PFBlockElement*> iECAL;
+    std::vector<const reco::PFBlockElement*> iHCAL;
+
+    for(const auto& iEle: elements)
     {
       // Find the tracks in the block
-      PFBlockElement::Type type = elements[iEle].type();        
+      const auto& type = iEle.type();        
       switch( type )
       {
         case PFBlockElement::TRACK:
-        	iTrack = iEle;
-	        nTracks++;
+        	iTrack.emplace_back(&iEle);
 	        break;
         case PFBlockElement::ECAL:
-	        iECAL.push_back( iEle );
-	        nEcal++;
+	        iECAL.emplace_back(&iEle);
 	        break;
         case PFBlockElement::HCAL:
-	        iHCAL.push_back( iEle );
-	        nHcal++;
+	        iHCAL.emplace_back(&iEle);
 	        break;
         default:
 	        continue;
@@ -255,31 +252,30 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
 
     //bypass for neutrals
     //don't want to match to neutral PF clusters?
-    if ( nTracks != 1 ) continue;
-    nCh[4]++;
+    if ( iTrack.size() != 1 ) continue;
 
     // Characteristics of the track
-    const reco::PFBlockElementTrack& et = dynamic_cast<const reco::PFBlockElementTrack &>( elements[iTrack] );
-    double p = et.trackRef()->p();  
-    double pt = et.trackRef()->pt(); 
-    double eta = et.trackRef()->eta();
-    double phi = et.trackRef()->phi();
+    const auto& et = dynamic_cast<const reco::PFBlockElementTrack *>( iTrack.at(0) );
+    const auto& p = et->trackRef()->p();  
+    const auto& pt = et->trackRef()->pt(); 
+    const auto& eta = et->trackRef()->eta();
+    const auto& phi = et->trackRef()->phi();
     
     //ECAL element
     //loop over ecal components of the pf particle
-    for(unsigned int ii=0;ii<nEcal;ii++)
+    //for(unsigned int ii=0;ii<nEcal;ii++)
+    for(const auto& ii: iECAL)
     {
-      const reco::PFBlockElementCluster& eecal =
-	    dynamic_cast<const reco::PFBlockElementCluster &>( elements[ iECAL[ii] ] );
-      double E_ECAL = eecal.clusterRef()->energy();  
-      double eta_ECAL = eecal.clusterRef()->eta();
-      double phi_ECAL = eecal.clusterRef()->phi();
+      const auto& eecal = dynamic_cast<const reco::PFBlockElementCluster *>( ii );
+      const auto& E_ECAL = eecal->clusterRef()->energy();  
+      const auto& eta_ECAL = eecal->clusterRef()->eta();
+      const auto& phi_ECAL = eecal->clusterRef()->phi();
 
       cluEcalE.push_back( E_ECAL );
       cluEcalEta.push_back( eta_ECAL );
       cluEcalPhi.push_back( phi_ECAL );
       
-      double d = blockRef->dist(iTrack, iECAL[ii], linkData);	
+      const auto& d = blockRef->dist(*iTrack.at(0), *ii, linkData);	
       distEcalTrk.push_back( d );
       vector<float> tmp;
       emHitF.push_back( tmp );
@@ -288,9 +284,7 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
       emHitY.push_back( tmp );
       emHitZ.push_back( tmp );
 
-      if(isMBMC_ || isSimu)
-      {
-	       const std::vector< reco::PFRecHitFraction > erh=eecal.clusterRef()->recHitFractions();
+	    const std::vector< reco::PFRecHitFraction > erh=eecal.clusterRef()->recHitFractions();
          //loop over rechit fractions
 	       for(unsigned int ieh=0;ieh<erh.size();ieh++)
          {
@@ -301,7 +295,6 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
 	         emHitY[ii].push_back( isEB?erh[ieh].recHitRef()->position().phi() :erh[ieh].recHitRef()->position().y() );
 	         emHitZ[ii].push_back( isEB?0:erh[ieh].recHitRef()->position().z() );
 	       }
-      }
     }//ecal element loop
 
     //HCAL element
@@ -512,167 +505,5 @@ float PFHgcalAnalyzer::dR(float eta1, float eta2, float phi1, float phi2 ) {
   
 }
 
-
-void PFHgcalAnalyzer::SaveSimHit(const edm::Event& iEvent,  float eta_, float phi_) {
-
-  //Access to simHits informations
-  Handle<PCaloHitContainer> h_PCaloHitsEB;
-  iEvent.getByLabel("g4SimHits","EcalHitsEB", h_PCaloHitsEB);
-
-  Handle<PCaloHitContainer> h_PCaloHitsEE;
-  iEvent.getByLabel("g4SimHits","EcalHitsEE", h_PCaloHitsEE);
-
-  Handle<PCaloHitContainer> h_PCaloHitsES;
-  iEvent.getByLabel("g4SimHits","EcalHitsES", h_PCaloHitsES);
-  
-  Handle<PCaloHitContainer> h_PCaloHitsH;
-  iEvent.getByLabel("g4SimHits","HcalHits", h_PCaloHitsH);
-
-  //iterator
-  PCaloHitContainer::const_iterator genSH;
-
-  //match hits... dR 0.2, should contains all simHits
-  
-  //ECAL
-  if( fabs(eta_) <1.5 ) { //barrel
-    
-    for(genSH = h_PCaloHitsEB->begin(); genSH != h_PCaloHitsEB->end(); genSH++) {
-      // float theta = genSH->thetaAtEntry();
-      // float phi = genSH->phiAtEntry();
-      // float eta = Eta( theta );
-      // float dr = dR( eta, eta_, phi, phi_ );
-      
-      // if(dr > 0.2 ) continue;
-      //cout<<" ecal hit : "<<genSH->energy()<<endl;
-      EcalSimHits.push_back( genSH->energy() );
-    }
-  }
-  else {
-    
-    for(genSH = h_PCaloHitsEE->begin(); genSH != h_PCaloHitsEE->end(); genSH++) {
-      // float theta = genSH->thetaAtEntry();
-      // float phi = genSH->phiAtEntry();
-      // float eta = Eta( theta );
-      // float dr = dR( eta, eta_, phi, phi_ );
-
-      // if(dr > 0.2 ) continue;
-      EcalSimHits.push_back( genSH->energy() );
-    }    
-
-    for(genSH = h_PCaloHitsES->begin(); genSH != h_PCaloHitsES->end(); genSH++) {
-       // float theta = genSH->thetaAtEntry();
-       // float phi = genSH->phiAtEntry();
-       // float eta = Eta( theta );
-       // float dr = dR( eta, eta_, phi, phi_ );
-
-       // if(dr > 0.2 ) continue;
-       ESSimHits.push_back( genSH->energy() );
-    }    
-  }
-  
-  //Hcal
-  float sH=0; 
-  for(genSH = h_PCaloHitsH->begin(); genSH != h_PCaloHitsH->end(); genSH++) {
-    // float theta = genSH->thetaAtEntry();
-    // float phi = genSH->phiAtEntry();
-    // float eta = Eta( theta );
-    // float dr = dR( eta, eta_, phi, phi_ );
-       // if(dr > 0.2 ) continue;
-    sH += genSH->energy();
-    //cout<<" ecal hit : "<<genSH->energy()<<"    "<<genSH->energyEM()<<"   "<<genSH->energyHad()<<"   "<<sH<<endl;
-       HcalSimHits.push_back( genSH->energy() );
-    }
-
-}
-
-
-float PFHgcalAnalyzer::Eta( float theta_ ) {
-  if( sin(theta_/2.)==0 ) return 10000.*cos(theta_/2.);
-  return -log(tan(theta_/2.0));
-}
-
-
-void PFHgcalAnalyzer::SaveRecHits(const edm::Event& iEvent, float eta_, float phi_) {
-
-  //get rechits
-  edm::Handle< EcalRecHitCollection > ebRecHits_h;
-  edm::Handle< EcalRecHitCollection > eeRecHits_h;
-  edm::Handle< EcalRecHitCollection > esRecHits_h;
- // Barrel
-  iEvent.getByLabel( "ecalRecHit","EcalRecHitsEB", ebRecHits_h );
-  // Endcaps
-  iEvent.getByLabel( "ecalRecHit","EcalRecHitsEE", eeRecHits_h );
-  // Preshower
-  iEvent.getByLabel( "ecalRecHit","EcalRecHitsES", esRecHits_h );
-  // Hcal
-  edm::Handle< HBHERecHitCollection > hbheRecHits_h;
-  iEvent.getByLabel( "hbhereco","", hbheRecHits_h );
-  
-
-  for( size_t ii =0; ii < ebRecHits_h->size(); ++ii )
-    {
-      EcalRecHitRef recHitRef( ebRecHits_h, ii );
-      EBDetId id = recHitRef->id();
-
-      const  GlobalPoint & rhPos = theCaloGeom->getPosition( id );
-      float eta = rhPos.eta();
-      float phi = rhPos.phi();
-      float dr = dR( eta, eta_, phi, phi_ );
-      if(dr > 0.1 ) continue;
-      //cout<<"EB : "<<dr<<"  "<<recHitRef->energy()<<endl;
-      EcalRecHits.push_back( recHitRef->energy() );
-      EcalRecHitsDr.push_back( dr );
-    }
-
-  for( size_t ii =0; ii < eeRecHits_h->size(); ++ii )
-    {
-      EcalRecHitRef recHitRef( eeRecHits_h, ii );
-      EEDetId id = recHitRef->id();
-
-      const  GlobalPoint & rhPos = theCaloGeom->getPosition( id );
-      float eta = rhPos.eta();
-      float phi = rhPos.phi();
-      float dr = dR( eta, eta_, phi, phi_ );
-      if(dr > 0.1 ) continue;
-      EcalRecHits.push_back( recHitRef->energy() );
-      EcalRecHitsDr.push_back( dr );
-    }
-
-
-  for( size_t ii =0; ii < hbheRecHits_h->size(); ++ii )
-    {
-      HBHERecHitRef recHitRef( hbheRecHits_h, ii );
-      HcalDetId id = recHitRef->id();
-
-      const  GlobalPoint & rhPos = theCaloGeom->getPosition( id );
-      float eta = rhPos.eta();
-      float phi = rhPos.phi();
-      float dr = dR( eta, eta_, phi, phi_ );
-      if(dr > 0.15 ) continue;
-      //cout<<"Hcal : "<<dr<<"  "<<recHitRef->energy()<<endl;
-      HcalRecHits.push_back( recHitRef->energy() );
-      HcalRecHitsDr.push_back( dr );
-    }
-
-  
-
-}
-
-float 
-PFHgcalAnalyzer::phi( float x, float y ) {
-  float phi_ =atan2(y, x);
-  return (phi_>=0) ?  phi_ : phi_ + 2*3.141592;
-}
-
-float 
-PFHgcalAnalyzer::dPhi( float phi1, float phi2 )
-{
-  float phi1_= phi( cos(phi1), sin(phi1) );
-  float phi2_= phi( cos(phi2), sin(phi2) );
-  float dphi_= phi1_-phi2_;
-  if( dphi_> 3.141592 ) dphi_-=2*3.141592;
-  if( dphi_<-3.141592 ) dphi_+=2*3.141592;
-  return dphi_;
-}
 
 DEFINE_FWK_MODULE(PFHgcalAnalyzer);

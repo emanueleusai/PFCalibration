@@ -28,13 +28,27 @@ process.load('DQMOffline.Configuration.DQMOfflineMC_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(-1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:step2.root'),
-    fileNames = cms.untracked.vstring('file:rereco.root'),
+    #fileNames = cms.untracked.vstring('file:rereco.root'),
+    fileNames = cms.untracked.vstring(
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_11.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_12.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_13.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_16.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_17.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_19.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_21.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_3.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_4.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_5.root',
+    'file:crab_projects/crab_rereco_HGCALfix03/results/rereco_6.root'
+    ),
+
     #fileNames = cms.untracked.vstring('file:E20ADE15-A5AE-E711-9434-0023AEEEB55F.root'),
     #fileNames = cms.untracked.vstring('root://se01.indiacms.res.in//store/user/spandey/step2/PGun_step2_DIGI_902_Apr_14_FULL/CRAB_UserFiles/crab_PGun_step2_DIGI_902_Apr_14_FULL/170414_125708/0000/step2_2.root'),
     #fileNames = cms.untracked.vstring(),
@@ -51,6 +65,11 @@ process.configurationMetadata = cms.untracked.PSet(
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
+
+
+#Setup FWK for multithreaded
+process.options.numberOfThreads=cms.untracked.uint32(8)
+process.options.numberOfStreams=cms.untracked.uint32(0)
 
 # Output definition
 
@@ -105,7 +124,8 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '93X_upgrade2023_realistic_v2',
 
 
 process.pfChargedHadronAnalyzer = cms.EDAnalyzer(
-    "PFHgcalAnalyzer",
+    "PFChargedHadronAnalyzer",
+    #"PFHgcalAnalyzer",
     PFCandidates = cms.InputTag("particleFlow"),
     PFSimParticles = cms.InputTag("particleFlowSimParticle"),
     EcalPFClusters = cms.InputTag("particleFlowClusterECAL"),

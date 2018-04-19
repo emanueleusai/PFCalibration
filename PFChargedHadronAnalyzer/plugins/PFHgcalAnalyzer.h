@@ -78,7 +78,7 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
   double pMin_;
 
   /// Min hcal raw energy for charged hadrons
-  double hcalMin_;
+  double calMin_;
   
   /// Max ecal raw energy to define a MIP
   double ecalMax_;
@@ -169,19 +169,9 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
   const CaloGeometry*    theCaloGeom;
 
 
-  void SaveRecHits(const edm::Event& iEvent, float eta_, float phi_);
-
-
-  void SaveSimHit(const edm::Event& iEvent, float eta_, float phi_);
-  float Eta( float theta);
-
   bool   verbose_;
   
   float dR(float eta1, float eta2, float phi1, float phi2 );
-
-
-  float phi(float, float);
-  float dPhi(float, float);
 
 
 };
