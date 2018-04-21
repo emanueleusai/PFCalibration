@@ -85,9 +85,6 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
   
   /// Min number of pixel hits for charged hadrons
   int nPixMin_;
-  
-  // isMInbias simulation
-  bool isMBMC_;
 
   /// Min number of track hits for charged hadrons
   std::vector<int> nHitMin_;
@@ -112,10 +109,6 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
   edm::LuminosityBlockNumber_t lumiBlock;
   edm::Timestamp time;
 
-  std::vector<float> addDr,addEmE,addHadE,addEta,addPhi;
-  std::vector<int> addPdgId;
-  std::vector<float> genDr,genE,genEta,genPhi;
-  std::vector<int> genPdgId;
 
   std::vector<float> cluEcalE;
   std::vector<float> cluEcalEta;
@@ -135,35 +128,8 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
 
   std::vector<float> cluHadE;
 
-  std::vector<std::vector<float> > emHitX; //eta for barrel
-  std::vector<std::vector<float> > emHitY; //phi for barrel
-  std::vector<std::vector<float> > emHitZ;
-  std::vector<std::vector<float> > emHitE;
-  std::vector<std::vector<float> > emHitF;
 
-  std::vector<std::vector<float> > hadHitX;
-  std::vector<std::vector<float> > hadHitY;
-  std::vector<std::vector<float> > hadHitZ;
-  std::vector<std::vector<float> > hadHitE;
-  std::vector<std::vector<float> > hadHitF;
 
-  //Basic clusters ECAL
-  std::vector<float> bcEcalE;
-  std::vector<float> bcEcalEta;
-  std::vector<float> bcEcalPhi;
-
-  //SimHits
-  std::vector<float> EcalSimHits;
-  std::vector<float> ESSimHits;
-  std::vector<float> HcalSimHits;
-
-  std::vector<float> EcalRecHits;
-  std::vector<float> ESRecHits;
-  std::vector<float> HcalRecHits;
-  
-  std::vector<float> EcalRecHitsDr;
-  std::vector<float> ESRecHitsDr;
-  std::vector<float> HcalRecHitsDr;
   
 
   const CaloGeometry*    theCaloGeom;

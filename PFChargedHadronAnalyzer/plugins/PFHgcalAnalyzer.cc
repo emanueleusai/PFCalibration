@@ -62,7 +62,7 @@ PFHgcalAnalyzer::PFHgcalAnalyzer(const edm::ParameterSet& iConfig) {
   nEtaMin_ = iConfig.getParameter< std::vector<double> > ("nEtaMin");
 
   //Is minbias from simulation
-  isMBMC_ = iConfig.getUntrackedParameter<bool>("isMinBiasMC",false);
+  // isMBMC_ = iConfig.getUntrackedParameter<bool>("isMinBiasMC",false);
 
   verbose_ = 
     iConfig.getUntrackedParameter<bool>("verbose",false);
@@ -163,18 +163,7 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
   // // bool isMBMC=true;
   // bool isSimu = iEvent.getByToken(tokenPFSimParticles_, trueParticles);
 
-  //simHits
-  EcalSimHits.clear();
-  ESSimHits.clear();
-  HcalSimHits.clear();
-  
-  //recHits
-  EcalRecHits.clear();
-  ESRecHits.clear();
-  HcalRecHits.clear();
-  EcalRecHitsDr.clear();
-  ESRecHitsDr.clear();
-  HcalRecHitsDr.clear();
+
 
   pfcsID.clear();
 
@@ -275,7 +264,7 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
       cluEcalEta.push_back( eta_ECAL );
       cluEcalPhi.push_back( phi_ECAL );
       
-      const auto& d = blockRef->dist(*iTrack.at(0), *ii, linkData);	
+      const auto& d = blockRef->dist(*iTrack.at(0), **ii, linkData);	
       distEcalTrk.push_back( d );
       vector<float> tmp;
       emHitF.push_back( tmp );
@@ -284,43 +273,42 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
       emHitY.push_back( tmp );
       emHitZ.push_back( tmp );
 
-	    const std::vector< reco::PFRecHitFraction > erh=eecal.clusterRef()->recHitFractions();
-         //loop over rechit fractions
-	       for(unsigned int ieh=0;ieh<erh.size();ieh++)
-         {
-	         emHitF[ii].push_back( erh[ieh].fraction() );
-	         emHitE[ii].push_back(  erh[ieh].recHitRef()->energy() );
-	         bool isEB= erh[ieh].recHitRef()->layer()==-1;
-	         emHitX[ii].push_back( isEB?erh[ieh].recHitRef()->position().eta() :erh[ieh].recHitRef()->position().x() );
-	         emHitY[ii].push_back( isEB?erh[ieh].recHitRef()->position().phi() :erh[ieh].recHitRef()->position().y() );
-	         emHitZ[ii].push_back( isEB?0:erh[ieh].recHitRef()->position().z() );
-	       }
+	    const auto& erh=eecal.clusterRef()->recHitFractions();
+      //loop over rechit fractions
+      for(const auto& ieh: erh)
+	    //for(unsigned int ieh=0;ieh<erh.size();ieh++)
+      {
+	       emHitF.back().push_back( ieh.fraction() );
+	       emHitE.back().push_back(  ieh.recHitRef()->energy() );
+	       bool isEB= ieh.recHitRef()->layer()==-1;
+	       emHitX.back().push_back( isEB?ieh.recHitRef()->position().eta() :ieh.recHitRef()->position().x() );
+	       emHitY.back().push_back( isEB?ieh.recHitRef()->position().phi() :ieh.recHitRef()->position().y() );
+	       emHitZ.back().push_back( isEB?0:ieh.recHitRef()->position().z() );
+	    }
     }//ecal element loop
 
     //HCAL element
-    for(unsigned int ii=0;ii<nHcal;ii++)
+    for(const auto& ii: iHCAL)
     {
-	    const reco::PFBlockElementCluster& ehcal =
-	    dynamic_cast<const reco::PFBlockElementCluster &>( elements[iHCAL[ii] ] );
-	    double E_HCAL = ehcal.clusterRef()->energy();  
-	    double eta_HCAL = ehcal.clusterRef()->eta();
-	    double phi_HCAL = ehcal.clusterRef()->phi();
+	    const auto& ehcal = dynamic_cast<const reco::PFBlockElementCluster *>( ii );
+	    const auto& E_HCAL = ehcal->clusterRef()->energy();  
+	    const auto& eta_HCAL = ehcal->clusterRef()->eta();
+	    const auto& phi_HCAL = ehcal->clusterRef()->phi();
 
 	    cluHcalE.push_back( E_HCAL );
 	    cluHcalEta.push_back( eta_HCAL );
 	    cluHcalPhi.push_back( phi_HCAL );
 
-	    double d = blockRef->dist(iTrack, iHCAL[ii], linkData);	
+	    const auto& d = blockRef->dist(*iTrack.at(0), *ii, linkData);	
 	    distHcalTrk.push_back( d );
-
 	    //ECAL-HCAL distance
 	    vector<float> tmp;
 	    distHcalEcal.push_back(tmp);
       //loop over ecal elements and store distance
-	    for(unsigned int ij=0;ij<nEcal;ij++)
+	    for(const auto& ij: iEcal)
       {
-	       d = blockRef->dist(iECAL[ij], iHCAL[ii], linkData);	
-	       distHcalEcal[ii].push_back( d );
+	       d = blockRef->dist(*ij, *ii, linkData);	
+	       distHcalEcal.back().push_back( d );
 	    }
 	    hadHitF.push_back( tmp );
 	    hadHitE.push_back( tmp );
@@ -328,28 +316,22 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
 	    hadHitY.push_back( tmp );
 	    hadHitZ.push_back( tmp );
 
-	    if(isMBMC_ || isSimu)
+	    const std::vector< reco::PFRecHitFraction > erh=ehcal.clusterRef()->recHitFractions();
+      //loop on fractions
+	    for(const auto& ieh: erh)
       {
-	       const std::vector< reco::PFRecHitFraction > erh=ehcal.clusterRef()->recHitFractions();
-         //loop on fractions
-	       for(unsigned int ieh=0;ieh<erh.size();ieh++)
-         {
-	         hadHitF[ii].push_back( erh[ieh].fraction() );
-	         hadHitE[ii].push_back(  erh[ieh].recHitRef()->energy() );
+	       hadHitF.back().push_back( ieh.fraction() );
+	       hadHitE.back().push_back( ieh.recHitRef()->energy() );
 
-	         bool isHB= erh[ieh].recHitRef()->layer()==1;
-	         hadHitX[ii].push_back( isHB?erh[ieh].recHitRef()->position().eta() :erh[ieh].recHitRef()->position().x() );
-	         hadHitY[ii].push_back( isHB?erh[ieh].recHitRef()->position().phi() :erh[ieh].recHitRef()->position().y() );
-	         hadHitZ[ii].push_back( isHB?0:erh[ieh].recHitRef()->position().z() );
-	       }
-	     }
-
+	       bool isHB= ieh.recHitRef()->layer()==1;
+	       hadHitX.back().push_back( isHB?ieh.recHitRef()->position().eta() :ieh.recHitRef()->position().x() );
+	       hadHitY.back().push_back( isHB?ieh.recHitRef()->position().phi() :ieh.recHitRef()->position().y() );
+	       hadHitZ.back().push_back( isHB?0:ieh.recHitRef()->position().z() );
+	    }
     }//hcal element loop
 
-    
     // A minimum p and pt selection
-      if ( p < pMin_ || pt < ptMin_ ) continue;
-      nCh[5]++;
+    if ( p < pMin_ || pt < ptMin_ ) continue;
     
     //track part
 
@@ -361,7 +343,7 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     unsigned int tidN = 0;
     unsigned int pxbN = 0;
     unsigned int pxdN = 0;
-    const reco::HitPattern& hp = et.trackRef()->hitPattern();
+    const auto& hp = et.trackRef()->hitPattern();
 
     //selecting only certain types of tracks
     switch ( et.trackRef()->algo() )
@@ -391,7 +373,6 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     
     // selecting Number of pixel hits
     if ( inner < nPixMin_ ) continue;
-    nCh[6]++;
     
     // Number of tracker hits (eta-dependent cut)
     bool trackerHitOK = false;
@@ -406,12 +387,10 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     }
 
     if ( !trackerHitOK ) continue;
-    nCh[7]++;
     
     // Selects only ECAL MIPs
     //threshold for ecal energy in the charged case?
     if ( ecalRaw > ecalMax_ ) continue;
-    nCh[8]++;
 
     
     //extrapolate track to ECAL --> impact position
@@ -430,30 +409,15 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     //Cluster characteristics
    
     //getting trajectory point at ecal entrance
-    if( isSimu )
-    {
-      reco::PFTrajectoryPoint::LayerType ecalEntrance = reco::PFTrajectoryPoint::ECALEntrance;
-      const reco::PFTrajectoryPoint& tpatecal = ((*trueParticles)[0]).extrapolatedPoint( ecalEntrance );
-      eta_ = tpatecal.positionREP().Eta();
-      phi_ = tpatecal.positionREP().Phi();
-      true_ = std::sqrt(tpatecal.momentum().Vect().Mag2());
-    }
-    else
-    {
-      eta_ = eta; 
-      phi_ = phi; 
-      true_ = p; 
-    }
+    reco::PFTrajectoryPoint::LayerType ecalEntrance = reco::PFTrajectoryPoint::ECALEntrance;
+    const reco::PFTrajectoryPoint& tpatecal = ((*trueParticles)[0]).extrapolatedPoint( ecalEntrance );
+    eta_ = tpatecal.positionREP().Eta();
+    phi_ = tpatecal.positionREP().Phi();
+    true_ = std::sqrt(tpatecal.momentum().Vect().Mag2());
+
 
 
     s->Fill();
-
-    addDr.clear();
-    addPdgId.clear();
-    addEmE.clear();
-    addHadE.clear();
-    addEta.clear();
-    addPhi.clear();
     
     cluEcalE.clear();
     cluEcalEta.clear();
@@ -467,12 +431,6 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
 
     distHcalTrk.clear();
     distHcalEcal.clear();
-
-    genDr.clear();
-    genPdgId.clear();
-    genE.clear();
-    genEta.clear();
-    genPhi.clear();
   
     emHitF.clear();
     emHitE.clear();
@@ -484,10 +442,6 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     hadHitX.clear();
     hadHitY.clear();
     hadHitZ.clear();
-    
-    bcEcalE.clear();
-    bcEcalEta.clear();
-    bcEcalPhi.clear();
     
     
   }
