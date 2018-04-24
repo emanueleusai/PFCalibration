@@ -12,6 +12,8 @@
 #include "DataFormats/EcalRecHit/interface/EcalUncalibratedRecHit.h" 
 #include "DataFormats/HcalRecHit/interface/HcalRecHitCollections.h" 
 #include "DataFormats/HcalRecHit/interface/HcalRecHitFwd.h"
+#include "SimDataFormats/Track/interface/SimTrack.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 
 #include "FWCore/Framework/interface/ESHandle.h"
 
@@ -34,13 +36,14 @@ using namespace reco;
 
 PFHgcalAnalyzer::PFHgcalAnalyzer(const edm::ParameterSet& iConfig) {
 
-  inputTagPFCandidates_ 
-    = iConfig.getParameter<InputTag>("PFCandidates");
+  inputTagPFCandidates_  = iConfig.getParameter<InputTag>("PFCandidates");
   tokenPFCandidates_ = consumes<reco::PFCandidateCollection>(inputTagPFCandidates_);
 
-  inputTagEcalPFClusters_ 
-    = iConfig.getParameter<InputTag>("EcalPFClusters");
-  tokenEcalPFClusters_ = consumes<reco::PFClusterCollection>(inputTagEcalPFClusters_);
+  // inputTagSimTracks_ = iConfig.getParameter<InputTag>("SimTracks");
+  // tokenSimTracks_ = consumes<std::vector<SimTrack> >(inputTagSimTracks_);
+
+  inputTagGenParticles_ = iConfig.getParameter<InputTag>("GenParticles");
+  tokenGenParticles_ = consumes<std::vector<reco::GenParticle> >(inputTagGenParticles_);
 
   // Smallest track pt
   ptMin_ = iConfig.getParameter<double>("ptMin");
@@ -76,23 +79,34 @@ PFHgcalAnalyzer::PFHgcalAnalyzer(const edm::ParameterSet& iConfig) {
   tf1 = new TFile(outputfile_.c_str(), "RECREATE");  
   s = new TTree("s"," PFCalibration");
 
-  s->Branch("true",&true_,"true/F");  
-  s->Branch("p",&p_,"p/F");  
-  s->Branch("ecal",&ecal_,"ecal/F");  
-  s->Branch("hcal",&hcal_,"hcal/F");  
-  s->Branch("ho",&ho_,"ho/F");  
-  s->Branch("eta",&eta_,"eta/F");  
-  s->Branch("phi",&phi_,"phi/F");
-  s->Branch("charge",&charge_,"charge/I");
-
-  s->Branch("dr",&dr_);  //spandey Apr_27 dR
-  s->Branch("Eecal",&Eecal_);  //spandey Apr_27 dR
-  s->Branch("Ehcal",&Ehcal_);  //spandey Apr_27 dR
-  s->Branch("pfcID",&pfcID_);  //spandey Apr_27 dR
-
-  s->Branch("pfcs",&pfcsID);
+  // s->Branch("true",&true_,"true/F");  
+  // s->Branch("p",&p_,"p/F");  
+  // s->Branch("ecal",&ecal_,"ecal/F");  
+  // s->Branch("hcal",&hcal_,"hcal/F");  
+  // s->Branch("ho",&ho_,"ho/F");  
+  // s->Branch("eta",&eta_,"eta/F");  
+  // s->Branch("phi",&phi_,"phi/F");
+  // s->Branch("charge",&charge_,"charge/I");
 
   
+
+ s->Branch("ecal_energy",&ecal_energy_,"ecal_energy/F");
+ s->Branch("ecal_energy_raw",&ecal_energy_raw_,"ecal_energy_raw/F");
+ s->Branch("hcal_energy",&hcal_energy_,"hcal_energy/F");
+ s->Branch("hcal_energy_raw",&hcal_energy_raw_,"hcal_energy_raw/F");
+ s->Branch("ho_energy",&ho_energy_,"ho_energy/F");
+ s->Branch("ho_energy_raw",&ho_energy_raw_,"ho_energy_raw/F");
+ s->Branch("p",&p_,"p/F");
+ s->Branch("pt",&pt_,"pt/F");
+ s->Branch("eta",&eta_,"eta/F");
+ s->Branch("phi",&phi_,"phi/F");
+ s->Branch("p_gen",&p_gen_,"p_gen/F");
+ s->Branch("pt_gen",&pt_gen_,"pt_gen/F");
+ s->Branch("eta_gen",&eta_gen_,"eta_gen/F");
+ s->Branch("phi_gen",&phi_gen_,"phi_gen/F");
+ s->Branch("e_gen",&e_gen_,"e_gen/F");
+
+
 
 
   s->Branch("run",&orun,"orun/l");
@@ -128,67 +142,54 @@ PFHgcalAnalyzer::beginRun(const edm::Run& run,
 void 
 PFHgcalAnalyzer::analyze(const Event& iEvent, 
 				 const EventSetup& iSetup) {
-  
-  LogDebug("PFHgcalAnalyzer")<<"START event: "<<iEvent.id().event()
-			 <<" in run "<<iEvent.id().run()<<endl;
-  
-
-   edm::ESHandle<CaloGeometry> pCalo;
-   iSetup.get<CaloGeometryRecord>().get( pCalo );
-   theCaloGeom = pCalo.product();
 
 
-
-  run  = iEvent.id().run();
-  evt  = iEvent.id().event();
-  lumiBlock = iEvent.id().luminosityBlock();
-  time = iEvent.time();
-
-  orun = (size_t)run;
-  oevt = (size_t)evt;
-  olumiBlock = (size_t)lumiBlock;
+  orun  = (size_t)iEvent.id().run();
+  oevt  = (size_t)iEvent.id().event();
+  olumiBlock = (size_t)iEvent.id().luminosityBlock();
   otime = (size_t)((iEvent.time().value())>>32);
+
 
   
   // get PFCandidates
   Handle<PFCandidateCollection> pfCandidates;
   iEvent.getByToken(tokenPFCandidates_, pfCandidates);
 
-  //get Ecal PFClusters
-  Handle<reco::PFClusterCollection> pfClustersEcal;
-  iEvent.getByToken(tokenEcalPFClusters_, pfClustersEcal);
+  // Handle<std::vector<SimTrack> > simTracks;
+  // iEvent.getByToken(tokenSimTracks_, simTracks);
 
-  // Handle<PFSimParticleCollection> trueParticles;
-  // //FIXME
-  // // bool isMBMC=true;
-  // bool isSimu = iEvent.getByToken(tokenPFSimParticles_, trueParticles);
+  Handle<std::vector<reco::GenParticle> > genParticles;
+  iEvent.getByToken(tokenGenParticles_, genParticles);
 
 
 
-  pfcsID.clear();
-
-  charge_=0;
-  dr_.clear();
-  Eecal_.clear();
-  Ehcal_.clear();  
-  pfcID_.clear();
-  p_ = 0.;
-  charge_=0;
-  ecal_ = 0.;
-  hcal_ = 0.;
+ ecal_energy_ = 0.0;
+ ecal_energy_raw_ = 0.0;
+ hcal_energy_ = 0.0;
+ hcal_energy_raw_ = 0.0;
+ ho_energy_ = 0.0;
+ ho_energy_raw_ = 0.0;
+ p_ = 0.0;
+ pt_ = 0.0;
+ eta_ = 0.0;
+ phi_ = 0.0;
+ p_gen_ = 0.0;
+ pt_gen_ = 0.0;
+ eta_gen_ = 0.0;
+ phi_gen_ = 0.0;
+ e_gen_ = 0.0;
 
   // count number of charged hadrons;
-  // auto charged_hadrons = std::make_unique<reco::PFCandidateCollection>();
   std::vector<const reco::PFCandidate*> charged_hadrons;
   for (const auto& pfc : *pfCandidates)
   {
     if ( pfc.particleId() == reco::PFCandidate::h)
     {
       charged_hadrons.emplace_back(&pfc);
-      if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0)
-      {
-        std::cout<<" "<< pfc.rawEcalEnergy() <<" "<<pfc.rawHcalEnergy() <<" "<<pfc.hcalEnergy() <<" "<<pfc.pt() <<" "<<pfc.eta() <<std::endl;
-      }
+      // if ( fabs(pfc.eta())>1.5 && fabs(pfc.eta())<3.0)
+      // {
+      //   std::cout <<" raw Ecal:"<<pfc.rawEcalEnergy() <<" raw Hcal:"<<pfc.rawHcalEnergy() <<" Hcal:"<<pfc.hcalEnergy() <<" p:"<<pfc.p()<<" pt:"<<pfc.pt() <<" eta:"<<pfc.eta() <<std::endl;
+      // }
     }
   }
   //select only events with exactly one charged hadron
@@ -202,136 +203,28 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     if ( pfc->pt() < ptMin_ ) continue;
 
 
+    // double ecalRaw = pfc->rawEcalEnergy();
+    // double hcalRaw = pfc->rawHcalEnergy();
+    // double hoRaw = pfc->rawHoEnergy();
     if ( pfc->rawEcalEnergy() + pfc->rawHcalEnergy() < calMin_ ) continue;
+
 
     // Find the corresponding PF block elements
     const auto& theElements = pfc->elementsInBlocks();
     if( theElements.empty() ) continue;
-    
-    const auto&  blockRef = theElements[0].first;
-    const auto&  linkData =  blockRef->linkData();
-    const auto&  elements = blockRef->elements();
 
-    // Check that there is only one track in the block.
 
-    std::vector<const reco::PFBlockElement*> iTrack;
-    std::vector<const reco::PFBlockElement*> iECAL;
-    std::vector<const reco::PFBlockElement*> iHCAL;
+    const auto& track = pfc->bestTrack();
 
-    for(const auto& iEle: elements)
-    {
-      // Find the tracks in the block
-      const auto& type = iEle.type();        
-      switch( type )
-      {
-        case PFBlockElement::TRACK:
-        	iTrack.emplace_back(&iEle);
-	        break;
-        case PFBlockElement::ECAL:
-	        iECAL.emplace_back(&iEle);
-	        break;
-        case PFBlockElement::HCAL:
-	        iHCAL.emplace_back(&iEle);
-	        break;
-        default:
-	        continue;
-      }
-
-    }
-
-    //bypass for neutrals
-    //don't want to match to neutral PF clusters?
-    if ( iTrack.size() != 1 ) continue;
 
     // Characteristics of the track
-    const auto& et = dynamic_cast<const reco::PFBlockElementTrack *>( iTrack.at(0) );
-    const auto& p = et->trackRef()->p();  
-    const auto& pt = et->trackRef()->pt(); 
-    const auto& eta = et->trackRef()->eta();
-    const auto& phi = et->trackRef()->phi();
-    
-    //ECAL element
-    //loop over ecal components of the pf particle
-    //for(unsigned int ii=0;ii<nEcal;ii++)
-    for(const auto& ii: iECAL)
-    {
-      const auto& eecal = dynamic_cast<const reco::PFBlockElementCluster *>( ii );
-      const auto& E_ECAL = eecal->clusterRef()->energy();  
-      const auto& eta_ECAL = eecal->clusterRef()->eta();
-      const auto& phi_ECAL = eecal->clusterRef()->phi();
-
-      cluEcalE.push_back( E_ECAL );
-      cluEcalEta.push_back( eta_ECAL );
-      cluEcalPhi.push_back( phi_ECAL );
-      
-      const auto& d = blockRef->dist(*iTrack.at(0), **ii, linkData);	
-      distEcalTrk.push_back( d );
-      vector<float> tmp;
-      emHitF.push_back( tmp );
-      emHitE.push_back( tmp );
-      emHitX.push_back( tmp );
-      emHitY.push_back( tmp );
-      emHitZ.push_back( tmp );
-
-	    const auto& erh=eecal.clusterRef()->recHitFractions();
-      //loop over rechit fractions
-      for(const auto& ieh: erh)
-	    //for(unsigned int ieh=0;ieh<erh.size();ieh++)
-      {
-	       emHitF.back().push_back( ieh.fraction() );
-	       emHitE.back().push_back(  ieh.recHitRef()->energy() );
-	       bool isEB= ieh.recHitRef()->layer()==-1;
-	       emHitX.back().push_back( isEB?ieh.recHitRef()->position().eta() :ieh.recHitRef()->position().x() );
-	       emHitY.back().push_back( isEB?ieh.recHitRef()->position().phi() :ieh.recHitRef()->position().y() );
-	       emHitZ.back().push_back( isEB?0:ieh.recHitRef()->position().z() );
-	    }
-    }//ecal element loop
-
-    //HCAL element
-    for(const auto& ii: iHCAL)
-    {
-	    const auto& ehcal = dynamic_cast<const reco::PFBlockElementCluster *>( ii );
-	    const auto& E_HCAL = ehcal->clusterRef()->energy();  
-	    const auto& eta_HCAL = ehcal->clusterRef()->eta();
-	    const auto& phi_HCAL = ehcal->clusterRef()->phi();
-
-	    cluHcalE.push_back( E_HCAL );
-	    cluHcalEta.push_back( eta_HCAL );
-	    cluHcalPhi.push_back( phi_HCAL );
-
-	    const auto& d = blockRef->dist(*iTrack.at(0), *ii, linkData);	
-	    distHcalTrk.push_back( d );
-	    //ECAL-HCAL distance
-	    vector<float> tmp;
-	    distHcalEcal.push_back(tmp);
-      //loop over ecal elements and store distance
-	    for(const auto& ij: iEcal)
-      {
-	       d = blockRef->dist(*ij, *ii, linkData);	
-	       distHcalEcal.back().push_back( d );
-	    }
-	    hadHitF.push_back( tmp );
-	    hadHitE.push_back( tmp );
-	    hadHitX.push_back( tmp );
-	    hadHitY.push_back( tmp );
-	    hadHitZ.push_back( tmp );
-
-	    const std::vector< reco::PFRecHitFraction > erh=ehcal.clusterRef()->recHitFractions();
-      //loop on fractions
-	    for(const auto& ieh: erh)
-      {
-	       hadHitF.back().push_back( ieh.fraction() );
-	       hadHitE.back().push_back( ieh.recHitRef()->energy() );
-
-	       bool isHB= ieh.recHitRef()->layer()==1;
-	       hadHitX.back().push_back( isHB?ieh.recHitRef()->position().eta() :ieh.recHitRef()->position().x() );
-	       hadHitY.back().push_back( isHB?ieh.recHitRef()->position().phi() :ieh.recHitRef()->position().y() );
-	       hadHitZ.back().push_back( isHB?0:ieh.recHitRef()->position().z() );
-	    }
-    }//hcal element loop
+    //const auto& et = dynamic_cast<const reco::PFBlockElementTrack *>( iTrack.at(0) );
+    // const auto& p = pfc->p();  
+    // const auto& pt = pfc->pt(); 
+    // const auto& eta = pfc->eta();
 
     // A minimum p and pt selection
-    if ( p < pMin_ || pt < ptMin_ ) continue;
+    if ( pfc->p() < pMin_ || pfc->pt() < ptMin_ ) continue;
     
     //track part
 
@@ -343,10 +236,10 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     unsigned int tidN = 0;
     unsigned int pxbN = 0;
     unsigned int pxdN = 0;
-    const auto& hp = et.trackRef()->hitPattern();
+    const auto& hp = track->hitPattern();
 
     //selecting only certain types of tracks
-    switch ( et.trackRef()->algo() )
+    switch ( track->algo() )
     {
       case TrackBase::initialStep:
       case TrackBase::lowPtTripletStep:
@@ -373,90 +266,82 @@ PFHgcalAnalyzer::analyze(const Event& iEvent,
     
     // selecting Number of pixel hits
     if ( inner < nPixMin_ ) continue;
+
     
     // Number of tracker hits (eta-dependent cut)
     bool trackerHitOK = false;
     double etaMin = 0.;
     for ( unsigned int ieta=0; ieta<nEtaMin_.size(); ++ieta )
     { 
-      if ( fabs(eta) < etaMin ) break;
+      if ( fabs(pfc->eta()) < etaMin ) break;
       double etaMax = nEtaMin_[ieta];
-      trackerHitOK = fabs(eta)>etaMin && fabs(eta)<etaMax && inner+outer>nHitMin_[ieta]; 
+      trackerHitOK = fabs(pfc->eta())>etaMin && fabs(pfc->eta())<etaMax && inner+outer>nHitMin_[ieta]; 
       if ( trackerHitOK ) break;
       etaMin = etaMax;
     }
 
     if ( !trackerHitOK ) continue;
+
     
     // Selects only ECAL MIPs
     //threshold for ecal energy in the charged case?
-    if ( ecalRaw > ecalMax_ ) continue;
-
-    
-    //extrapolate track to ECAL --> impact position
-    etaEcal_ = et.positionAtECALEntrance().Eta();
-    phiEcal_ = et.positionAtECALEntrance().Phi();
+    if ( pfc->rawEcalEnergy() > ecalMax_ ) continue;
 
 
     // Fill the root-tuple
-    p_ = p;
-    ecal_ = ecalRaw;
-    hcal_ = hcalRaw;
-    ho_ = hoRaw;
+    // p_ = p;
+    // ecal_ = pfc->rawEcalEnergy();
+    // hcal_ = hcalRaw;
+    // ho_ = hoRaw;
 
-    charge_ = pfc.charge();
+    // charge_ = pfc->charge();
+
+
+    ecal_energy_ = pfc->ecalEnergy();
+    ecal_energy_raw_ = pfc->rawEcalEnergy();
+    hcal_energy_ = pfc->hcalEnergy();
+    hcal_energy_raw_ = pfc->rawHcalEnergy();
+    ho_energy_ = pfc->hoEnergy();
+    ho_energy_raw_ = pfc->rawHoEnergy();
+    p_ = pfc->p();
+    pt_ = pfc->pt();
+    eta_ = pfc->eta();
+    phi_ = pfc->phi();
+    p_gen_ = genParticles->at(0).p();
+    pt_gen_ = genParticles->at(0).pt();
+    eta_gen_ = genParticles->at(0).eta();
+    phi_gen_ = genParticles->at(0).phi();
+    e_gen_ = genParticles->at(0).energy();
 
     //Cluster characteristics
    
     //getting trajectory point at ecal entrance
-    reco::PFTrajectoryPoint::LayerType ecalEntrance = reco::PFTrajectoryPoint::ECALEntrance;
-    const reco::PFTrajectoryPoint& tpatecal = ((*trueParticles)[0]).extrapolatedPoint( ecalEntrance );
-    eta_ = tpatecal.positionREP().Eta();
-    phi_ = tpatecal.positionREP().Phi();
-    true_ = std::sqrt(tpatecal.momentum().Vect().Mag2());
+    // std::cout<<"simtrack "<<simTracks->size()<<std::endl;
+    // for (const auto& tr: *simTracks)
+    // {
+
+    //   std::cout<<tr.momentum().Pt()<<" "<<tr.type()<<std::endl;
+
+    // }
+
+    // for (const auto& tr: *genParticles)
+    // {
+
+    //   std::cout<<tr.pdgId()<<" "<<tr.pt()<<" "<<tr.numberOfMothers()<<std::endl;
+
+    // }
+    //reco::PFTrajectoryPoint::LayerType ecalEntrance = reco::PFTrajectoryPoint::ECALEntrance;
+    // const reco::PFTrajectoryPoint& tpatecal = ((*trueParticles)[0]).extrapolatedPoint( ecalEntrance );
+    // eta_ = tpatecal.positionREP().Eta();
+    // phi_ = tpatecal.positionREP().Phi();
+    // true_ = std::sqrt(tpatecal.momentum().Vect().Mag2());
 
 
 
     s->Fill();
-    
-    cluEcalE.clear();
-    cluEcalEta.clear();
-    cluEcalPhi.clear();
-
-    distEcalTrk.clear();
-
-    cluHcalE.clear();
-    cluHcalEta.clear();
-    cluHcalPhi.clear();
-
-    distHcalTrk.clear();
-    distHcalEcal.clear();
-  
-    emHitF.clear();
-    emHitE.clear();
-    emHitX.clear();
-    emHitY.clear();
-    emHitZ.clear();
-    hadHitF.clear();
-    hadHitE.clear();
-    hadHitX.clear();
-    hadHitY.clear();
-    hadHitZ.clear();
-    
+        
     
   }
-}
-
-
-float PFHgcalAnalyzer::dR(float eta1, float eta2, float phi1, float phi2 ) {
-
-  TVector3 v1(0,0,0),v2(0,0,0);
-  
-  v1.SetPtEtaPhi(1, eta1, phi1);
-  v2.SetPtEtaPhi(1, eta2, phi2);
-
-  return v1.DrEtaPhi( v2 );
-  
 }
 
 

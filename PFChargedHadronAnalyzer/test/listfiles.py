@@ -11,8 +11,8 @@ import subprocess
 # folder='/store/user/eusai/CRAB_PrivateMC/step1_pigun05/180417_012449/0000/'
 # outname='step1_pigun05_list'
 
-folder='/store/user/eusai/CRAB_UserFiles/step2_pigun01/180420_015907/0000/'
-outname='step2_pigun01_list'
+folder='/store/user/eusai/CRAB_UserFiles/step3_pigun01/180421_014640/0000/'
+outname='step3_pigun01_list'
 
 xrootd='root://cmsxrootd-site.fnal.gov/'
 eosls=subprocess.check_output(['eos','root://cmseos.fnal.gov','ls',folder])

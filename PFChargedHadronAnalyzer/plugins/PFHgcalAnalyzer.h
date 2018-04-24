@@ -22,6 +22,7 @@
 
 #include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
 #include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+#include "SimDataFormats/Track/interface/SimTrack.h"
 
 
 #include <TFile.h>
@@ -45,6 +46,8 @@
 #include "DataFormats/EcalDetId/interface/ESDetId.h"
 #include "DataFormats/HcalRecHit/interface/HBHERecHit.h"
 
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+
 
 
 
@@ -64,12 +67,12 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
 
   /// PFCandidates in which we'll look for pile up particles 
   edm::InputTag   inputTagPFCandidates_;
-  edm::InputTag   inputTagPFSimParticles_;
+  // edm::InputTag   inputTagSimTracks_;
+  edm::InputTag   inputTagGenParticles_;
   
-  edm::InputTag   inputTagEcalPFClusters_;
   edm::EDGetTokenT<reco::PFCandidateCollection> tokenPFCandidates_;
-  edm::EDGetTokenT<reco::PFSimParticleCollection>   tokenPFSimParticles_;
-  edm::EDGetTokenT<reco::PFClusterCollection>   tokenEcalPFClusters_;
+  // edm::EDGetTokenT<std::vector<SimTrack> >   tokenSimTracks_;
+  edm::EDGetTokenT<std::vector<reco::GenParticle> >   tokenGenParticles_;
 
   /// Min pt for charged hadrons
   double ptMin_;
@@ -90,54 +93,19 @@ class PFHgcalAnalyzer : public edm::EDAnalyzer {
   std::vector<int> nHitMin_;
   std::vector<double> nEtaMin_;
   
-  // Number of tracks after cuts
-  std::vector<unsigned int> nCh;
-  std::vector<unsigned int> nEv;
   
   std::string outputfile_;
   TFile *tf1;
   TTree* s;
   
-  float true_,p_,ecal_,hcal_,eta_,phi_,ho_;
-  float etaEcal_,phiEcal_;
+  //float true_,p_,ecal_,hcal_,eta_,phi_,ho_;
+  float ecal_energy_, ecal_energy_raw_, hcal_energy_, hcal_energy_raw_, ho_energy_, ho_energy_raw_, p_, pt_, eta_, phi_, p_gen_, pt_gen_, eta_gen_, phi_gen_, e_gen_;
+
   int charge_;
-  std::vector<float> dr_,Eecal_,Ehcal_,pfcID_;
   size_t orun,oevt,olumiBlock,otime;
   
-  edm::RunNumber_t run;
-  edm::EventNumber_t evt;
-  edm::LuminosityBlockNumber_t lumiBlock;
-  edm::Timestamp time;
-
-
-  std::vector<float> cluEcalE;
-  std::vector<float> cluEcalEta;
-  std::vector<float> cluEcalPhi;
-
-  std::vector<float> distEcalTrk;
-
-
-  std::vector<float> cluHcalE;
-  std::vector<float> cluHcalEta;
-  std::vector<float> cluHcalPhi;
-
-  std::vector<float> distHcalTrk;
-  std::vector<std::vector<float> > distHcalEcal;
-
-  std::vector<int> pfcsID;
-
-  std::vector<float> cluHadE;
-
-
-
-  
-
-  const CaloGeometry*    theCaloGeom;
-
 
   bool   verbose_;
-  
-  float dR(float eta1, float eta2, float phi1, float phi2 );
 
 
 };
