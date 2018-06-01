@@ -1,0 +1,230 @@
+/*
+ *  \author Julia Yarba
+ */
+
+#include <ostream>
+
+#include "IOMC/ParticleGuns/interface/FlatRandomEDiGunProducer.h"
+
+#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
+
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "FWCore/Utilities/interface/RandomNumberGenerator.h"
+
+#include "CLHEP/Random/RandFlat.h"
+
+#include "DataFormats/Math/interface/deltaR.h"
+
+#include "FWCore/Framework/interface/MakerMacros.h"
+
+using namespace edm;
+using namespace std;
+
+FlatRandomEDiGunProducer::FlatRandomEDiGunProducer(const ParameterSet& pset) :
+   BaseFlatGunProducer(pset)
+{
+
+   ParameterSet defpset ;
+   // ParameterSet pgun_params = pset.getParameter<ParameterSet>("PGunParameters") ;
+   ParameterSet pgun_params = 
+      pset.getParameter<ParameterSet>("PGunParameters") ;
+  
+   // doesn't seem necessary to check if pset is empty - if this
+   // is the case, default values will be taken for params
+   fMinE = pgun_params.getParameter<double>("MinE");
+   fMaxE = pgun_params.getParameter<double>("MaxE"); 
+
+   fMinDR = pgun_params.getParameter<double>("MinDR");
+   fMaxDR = pgun_params.getParameter<double>("MaxDR");
+  
+   produces<HepMCProduct>("unsmeared");
+   produces<GenEventInfoProduct>();
+
+   cout << "Internal FlatRandomEGun is initialzed" << endl ;
+// cout << "It is going to generate " << remainingEvents() << "events" << endl ;
+   
+}
+
+FlatRandomEDiGunProducer::~FlatRandomEDiGunProducer()
+{
+   // no need to cleanup fEvt since it's done in HepMCProduct
+}
+
+void FlatRandomEDiGunProducer::produce(Event & e, const EventSetup& es) 
+{
+   edm::Service<edm::RandomNumberGenerator> rng;
+   CLHEP::HepRandomEngine* engine = &rng->getEngine(e.streamID());
+
+   if ( fVerbosity > 0 )
+   {
+      cout << " FlatRandomEDiGunProducer : Begin New Event Generation" << endl ; 
+   }
+   
+   // event loop (well, another step in it...)
+          
+   // no need to clean up GenEvent memory - done in HepMCProduct
+
+   // here re-create fEvt (memory)
+   //
+   fEvt = new HepMC::GenEvent() ;
+   
+   // now actualy, cook up the event from PDGTable and gun parameters
+   //
+
+   // 1st, primary vertex
+   //
+   HepMC::GenVertex* Vtx = new HepMC::GenVertex( HepMC::FourVector(0.,0.,0.));
+   
+   // loop over particles
+   //
+   int barcode = 1;
+   for (unsigned int ip=0; ip<fPartIDs.size(); ip++)
+   {
+       double energy = CLHEP::RandFlat::shoot(engine, fMinE, fMaxE) ;
+       double eta    = CLHEP::RandFlat::shoot(engine, fMinEta, fMaxEta) ;
+       double phi    = CLHEP::RandFlat::shoot(engine, fMinPhi, fMaxPhi) ;
+       int PartID = fPartIDs[ip] ;
+       const HepPDT::ParticleData* PData = fPDGTable->particle(HepPDT::ParticleID(abs(PartID))) ;
+       double mass   = PData->mass().value() ;
+       double mom2   = energy*energy - mass*mass ;
+       double mom    = 0. ;
+       if (mom2 > 0.) 
+       {
+          mom = sqrt(mom2) ;
+       }
+       else
+       {
+          mom = 0. ;
+       }
+       double theta  = 2.*atan(exp(-eta)) ;
+       double px     = mom*sin(theta)*cos(phi) ;
+       double py     = mom*sin(theta)*sin(phi) ;
+       double pz     = mom*cos(theta) ;
+
+       HepMC::FourVector p(px,py,pz,energy) ;
+       double sign = CLHEP::RandFlat::shoot(engine, -1, 1) ;
+       if (sign<0)
+       {
+        PartID = - PartID;
+       }
+       HepMC::GenParticle* Part = new HepMC::GenParticle(p,PartID,1);
+       Part->suggest_barcode( barcode ) ;
+       barcode++ ;
+       Vtx->add_particle_out(Part);
+       std::cout<<"part1: "<<eta<<" "<<phi<<" "<<energy<<" "<<PartID<<"\n";
+       
+       //second particle
+       auto is_good_particle=false;
+       //std::cout<<"starting"<<std::endl;
+       double energy_2 = CLHEP::RandFlat::shoot(engine, fMinE, fMaxE) ;
+       double deltaR_2 = CLHEP::RandFlat::shoot(engine, fMinDR, fMaxDR) ;
+       while (!is_good_particle)
+       {
+          
+          double theta    = CLHEP::RandFlat::shoot(engine, -M_PI, M_PI) ;
+          double delta_eta= deltaR_2*cos(theta) ;
+          double delta_phi= deltaR_2*sin(theta) ;
+          double eta_2 = eta + delta_eta;
+          if ( eta_2 < fMaxEta && eta_2 > fMinEta )
+          {
+            is_good_particle = true;
+          }
+          else
+          {
+            eta_2 = eta - delta_eta;
+            if ( eta_2 < fMaxEta && eta_2 > fMinEta )
+            {
+              is_good_particle = true;
+            }
+          }
+          double phi_2    = phi + delta_phi ;
+          if (phi_2 > M_PI)
+          {
+            phi_2 = phi_2 - 2*M_PI;
+          }
+          if (phi_2 < -M_PI)
+          {
+            phi_2 = 2*M_PI + phi_2;
+          }
+          if (is_good_particle)
+          {
+            int PartID_2 = fPartIDs[ip] ;
+            const HepPDT::ParticleData* PData_2 = fPDGTable->particle(HepPDT::ParticleID(abs(PartID_2))) ;
+            double mass_2   = PData_2->mass().value() ;
+            double mom2_2   = energy_2*energy_2 - mass_2*mass_2 ;
+            double mom_2    = 0. ;
+            if (mom2_2 > 0.) 
+            {
+              mom_2 = sqrt(mom2_2) ;
+            }
+            else
+            {
+              mom_2 = 0. ;
+            }
+            double theta_2  = 2.*atan(exp(-eta_2)) ;
+            double px_2     = mom_2*sin(theta_2)*cos(phi_2) ;
+            double py_2     = mom_2*sin(theta_2)*sin(phi_2) ;
+            double pz_2     = mom_2*cos(theta_2) ;
+
+            HepMC::FourVector p_2(px_2,py_2,pz_2,energy_2) ;
+            double sign_2 = CLHEP::RandFlat::shoot(engine, -1, 1) ;
+            if (sign_2<0)
+            {
+              PartID_2 = - PartID_2;
+            }
+            HepMC::GenParticle* Part_2 = new HepMC::GenParticle(p_2,PartID_2,1);
+            Part_2->suggest_barcode( barcode ) ;
+            barcode++ ;
+            Vtx->add_particle_out(Part_2);
+            std::cout<<"part2: "<<eta_2<<" "<<phi_2<<" "<<energy_2<<" "<<PartID_2<<"\n";
+          }
+       }
+       //std::cout<<"finished"<<std::endl;
+
+       if ( fAddAntiParticle )
+       {
+          HepMC::FourVector ap(-px,-py,-pz,energy) ;
+	        int APartID = -PartID ;
+	        if ( PartID == 22 || PartID == 23 )
+	        {
+	           APartID = PartID ;
+	        }
+	        HepMC::GenParticle* APart =
+	        new HepMC::GenParticle(ap,APartID,1);
+	        APart->suggest_barcode( barcode ) ;
+	        barcode++ ;
+	        Vtx->add_particle_out(APart) ;
+       }
+       
+   }
+   fEvt->add_vertex(Vtx) ;
+   fEvt->set_event_number(e.id().event()) ;
+   fEvt->set_signal_process_id(20) ;  
+   
+   
+   if ( fVerbosity > 0 )
+   {
+      fEvt->print() ;  
+   }  
+
+   unique_ptr<HepMCProduct> BProduct(new HepMCProduct()) ;
+   BProduct->addHepMCData( fEvt );
+   e.put(std::move(BProduct), "unsmeared");
+
+   unique_ptr<GenEventInfoProduct> genEventInfo(new GenEventInfoProduct(fEvt));
+   e.put(std::move(genEventInfo));
+    
+   if ( fVerbosity > 0 )
+   {
+      // for testing purpose only
+      //fEvt->print() ;  // for some strange reason, it prints NO event info
+      // after it's been put into edm::Event...
+      cout << " FlatRandomEDiGunProducer : Event Generation Done " << endl;
+   }
+}
+
+
+DEFINE_FWK_MODULE(FlatRandomEDiGunProducer);

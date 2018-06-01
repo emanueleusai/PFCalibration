@@ -1,0 +1,36 @@
+#ifndef FlatRandomEDiGunProducer_H
+#define FlatRandomEDiGunProducer_H
+
+/** \class FlatRandomEDiGunProducer
+ *
+ * Generates single particle gun in HepMC format
+ * Julia Yarba 10/2005 
+ ***************************************/
+
+#include "IOMC/ParticleGuns/interface/BaseFlatGunProducer.h"
+
+namespace edm
+{
+
+  class FlatRandomEDiGunProducer : public BaseFlatGunProducer
+  {
+  
+  public:
+    FlatRandomEDiGunProducer(const ParameterSet & pset);
+    ~FlatRandomEDiGunProducer() override;
+   
+    void produce(Event &e, const EventSetup& es) override;
+
+  private:
+    
+    // data members
+    
+    double            fMinE   ;
+    double            fMaxE   ;
+    double            fMinDR   ;
+    double            fMaxDR   ;
+
+  };
+} 
+
+#endif
