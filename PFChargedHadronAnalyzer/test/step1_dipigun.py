@@ -71,8 +71,18 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '93X_upgrade2023_realistic_v2',
 process.generator = cms.EDProducer("FlatRandomEDiGunProducer",
     AddAntiParticle = cms.bool(False),
     PGunParameters = cms.PSet(
-        MaxDR = cms.double(0.5),
-        MinDR = cms.double(0.2),
+        # MaxDR = cms.double(0.5),
+        # MinDR = cms.double(0.2),
+        # MaxDR = cms.double(0.2),
+        # MinDR = cms.double(0.1),
+        # MaxDR = cms.double(0.1),
+        # MinDR = cms.double(0.05),
+        # MaxDR = cms.double(0.05),
+        # MinDR = cms.double(0.02),
+        # MaxDR = cms.double(0.02),
+        # MinDR = cms.double(0.01),
+        MaxDR = cms.double(0.01),
+        MinDR = cms.double(0.0),
         MaxE = cms.double(1000.0),
         MaxEta = cms.double(2.8),
         MaxPhi = cms.double(3.14159265359),
@@ -100,8 +110,8 @@ from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
 
 #Setup FWK for multithreaded
-# process.options.numberOfThreads=cms.untracked.uint32(4)
-# process.options.numberOfStreams=cms.untracked.uint32(0)
+process.options.numberOfThreads=cms.untracked.uint32(4)
+process.options.numberOfStreams=cms.untracked.uint32(0)
 # filter all path with the production filter sequence
 for path in process.paths:
 	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 

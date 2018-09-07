@@ -1,7 +1,7 @@
 import subprocess
 
-folder='/store/user/eusai/'
-select='crab3checkwrite'
+folder='/store/user/eusai/CRAB_UserFiles/step2_dipigun01/180612_020934/0000/'
+select='step2_4'
 
 eosls=subprocess.check_output(['eos','root://cmseos.fnal.gov','ls',folder])
 names=eosls.splitlines()

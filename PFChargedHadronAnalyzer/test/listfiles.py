@@ -13,8 +13,21 @@ import subprocess
 # folder='/store/user/eusai/CRAB_UserFiles/step3_pigun01/180421_014640/0000/'
 # outname='step3_pigun01_list'
 
-folder='/store/user/eusai/CRAB_UserFiles/step4_pigun01/180424_025713/0000/'
-outname='step4_pigun01_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p5_0p2/180609_011839/0000/'
+# outname='step1_dipigun01_0p5_0p2_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p2_0p1/180609_013428/0000/'
+# outname='step1_dipigun01_0p2_0p1_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p1_0p05/180609_015005/0000/'
+# outname='step1_dipigun01_0p1_0p05_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p05_0p02/180609_015654/0000/'
+# outname='step1_dipigun01_0p05_0p02_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p02_0p01/180609_015810/0000/'
+# outname='step1_dipigun01_0p02_0p01_list'
+# folder='/store/user/eusai/CRAB_PrivateMC/step1_dipigun01_0p01_0p00/180609_015908/0000/'
+# outname='step1_dipigun01_0p01_0p00_list'
+
+folder='/store/user/eusai/CRAB_UserFiles/step2_dipigun01/180612_020934/0001/'
+outname='step2_dipigun01_list2'
 
 xrootd='root://cmsxrootd-site.fnal.gov/'
 eosls=subprocess.check_output(['eos','root://cmseos.fnal.gov','ls',folder])
